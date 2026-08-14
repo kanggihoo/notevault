@@ -43,6 +43,9 @@ const config: ExpoConfig = {
 
   extra: {
     githubClientId: process.env.GITHUB_CLIENT_ID ?? '',
+    eas: {
+      projectId: '84716c94-4f83-40b8-b173-3726188e4cc6',
+    },
   },
 }
 

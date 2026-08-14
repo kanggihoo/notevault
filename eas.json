@@ -9,18 +9,27 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GITHUB_CLIENT_ID": "Ov23lihE5VPgq7pnzynD"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GITHUB_CLIENT_ID": "Ov23lihE5VPgq7pnzynD"
       }
     },
     "production": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GITHUB_CLIENT_ID": "Ov23lihE5VPgq7pnzynD"
       }
     }
   },
