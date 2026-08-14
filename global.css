@@ -1,0 +1,98 @@
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+
+/*
+ * 색상 토큰의 단일 출처. design.md 2·3장 참조.
+ *
+ * --nv- 접두: 볼트의 .html 문서가 --background 같은 일반 이름을 쓸 때
+ * 충돌하지 않도록 한다 (design.md 8장).
+ *
+ * light-dark(라이트값, 다크값) 한 줄이 두 테마를 정의한다.
+ * - 앱: react-native-css 가 시스템/수동 color-scheme 에 따라 해석한다.
+ * - 렌더러: assets/renderer/build.mjs 가 이 파일을 파싱해
+ *   html[data-nv-theme] 블록 두 개로 펼친다.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* 표면 */
+  --nv-background: light-dark(#ffffff, #1e1e1e);
+  --nv-card: light-dark(#f7f7f7, #262626);
+  /* 라이트 popover 는 background 와 같다 — border + 그림자로 분리한다 */
+  --nv-popover: light-dark(#ffffff, #2d2d2d);
+  --nv-muted: light-dark(#ededed, #363636);
+  --nv-border: light-dark(#e2e2e2, #363636);
+
+  /* 텍스트 — 다크는 순백을 쓰지 않는다 (장시간 독서 피로) */
+  --nv-foreground: light-dark(#1e1e1e, #dcddde);
+  --nv-muted-foreground: light-dark(#6b6b6b, #999999);
+  /* 비활성·placeholder 전용. 메타데이터에는 muted-foreground */
+  --nv-subtle-foreground: light-dark(#767676, #858585);
+
+  /* 강조 — 보라 하나. 콜아웃만 예외 (렌더러 로컬 팔레트) */
+  --nv-primary: light-dark(#7c3aed, #7c3aed);
+  --nv-primary-foreground: light-dark(#ffffff, #ffffff);
+  --nv-primary-pressed: light-dark(#5b21b6, #6d28d9);
+  --nv-accent: light-dark(#6d28d9, #a78bfa);
+  --nv-primary-tint: light-dark(rgba(124, 58, 237, 0.1), rgba(124, 58, 237, 0.14));
+
+  /* 상태 — 라이트는 흰 배경 AA 통과값 (design.md 2장 대비 검증) */
+  --nv-success: light-dark(#15803d, #4ade80);
+  --nv-error: light-dark(#dc2626, #f87171);
+  --nv-warning-state: light-dark(#a16207, #fbbf24);
+
+  /* 본문 의미색 (렌더러가 사용) */
+  --nv-link-external: light-dark(#3b6ea5, #7c9cbf);
+  --nv-highlight: light-dark(rgba(255, 213, 79, 0.45), rgba(255, 213, 79, 0.25));
+}
+
+@layer theme {
+  @theme {
+    /* 색 — bg-background, text-foreground 등으로 사용 */
+    --color-background: var(--nv-background);
+    --color-card: var(--nv-card);
+    --color-popover: var(--nv-popover);
+    --color-muted: var(--nv-muted);
+    --color-border: var(--nv-border);
+    --color-foreground: var(--nv-foreground);
+    --color-muted-foreground: var(--nv-muted-foreground);
+    --color-subtle-foreground: var(--nv-subtle-foreground);
+    --color-primary: var(--nv-primary);
+    --color-primary-foreground: var(--nv-primary-foreground);
+    --color-primary-pressed: var(--nv-primary-pressed);
+    --color-accent: var(--nv-accent);
+    --color-primary-tint: var(--nv-primary-tint);
+    --color-success: var(--nv-success);
+    --color-error: var(--nv-error);
+    --color-warning-state: var(--nv-warning-state);
+
+    /* radius — design.md 5장 */
+    --radius-sm: 4px; /* 콜아웃, 코드블록 */
+    --radius-md: 6px; /* 버튼, 입력, 체크박스 */
+    --radius-lg: 10px; /* 바텀시트, 모달 */
+
+    /* 타이포그래피 — design.md 4장 */
+    --text-note-title: 26px;
+    --text-note-title--line-height: 1.25;
+    --text-note-title--letter-spacing: -0.3px;
+    --text-h1: 24px;
+    --text-h1--line-height: 1.3;
+    --text-h2: 20px;
+    --text-h2--line-height: 1.3;
+    --text-h3: 17px;
+    --text-h3--line-height: 1.3;
+    --text-body: 16px;
+    --text-body--line-height: 1.7;
+    --text-code: 14px;
+    --text-code--line-height: 1.55;
+    --text-row: 15px;
+    --text-row--line-height: 1.3;
+    --text-meta: 13px;
+    --text-meta--line-height: 1.3;
+    --text-section: 11px;
+    --text-section--line-height: 1.2;
+    --text-section--letter-spacing: 0.6px;
+  }
+}
