@@ -1,0 +1,284 @@
+/*
+ * 노트 본문 스타일. design.md 2·3·4장 참조.
+ *
+ * --nv-* 표면·텍스트 변수는 빌드 시 global.css 에서 추출되어 이 파일 앞에
+ * 붙는다(단일 출처). 이 파일에는 변수를 사용하는 스타일과, 렌더러 전용인
+ * 콜아웃 팔레트만 둔다.
+ *
+ * 전역 태그 셀렉터를 쓰는 이유: 이 문서 전체가 우리가 생성한 마크다운
+ * 렌더 결과다. 볼트의 .html 파일은 이 스타일시트를 로드하지 않는 별도
+ * WebView 에서 열린다(design.md 8장). 격리는 파일 로드 여부로 달성된다.
+ */
+
+html[data-nv-theme='light'] {
+  color-scheme: light;
+  /* 콜아웃 기준 팔레트 — Obsidian 코어 라이트 값 */
+  --nv-co-blue: 8 109 221;
+  --nv-co-cyan: 0 191 188;
+  --nv-co-green: 8 185 78;
+  --nv-co-orange: 236 117 0;
+  --nv-co-red: 233 49 71;
+  --nv-co-purple: 120 82 238;
+  --nv-co-gray: 158 158 158;
+  /* 제목 전용 색 — 흰 배경 AA 보정 (design.md 3장) */
+  --nv-co-blue-title: #086ddd;
+  --nv-co-cyan-title: #007a78;
+  --nv-co-green-title: #087f3a;
+  --nv-co-orange-title: #a64b00;
+  --nv-co-red-title: #c6283d;
+  --nv-co-purple-title: #5b21b6;
+  --nv-co-gray-title: #5f6368;
+}
+
+html[data-nv-theme='dark'] {
+  color-scheme: dark;
+  /* 다크는 원색이 전부 AA 를 통과하므로 제목색을 보정하지 않는다 */
+  --nv-co-blue: 2 122 255;
+  --nv-co-cyan: 83 223 221;
+  --nv-co-green: 68 207 110;
+  --nv-co-orange: 233 151 63;
+  --nv-co-red: 251 70 76;
+  --nv-co-purple: 168 130 255;
+  --nv-co-gray: 158 158 158;
+  --nv-co-blue-title: rgb(2 122 255);
+  --nv-co-cyan-title: rgb(83 223 221);
+  --nv-co-green-title: rgb(68 207 110);
+  --nv-co-orange-title: rgb(233 151 63);
+  --nv-co-red-title: rgb(251 70 76);
+  --nv-co-purple-title: rgb(168 130 255);
+  --nv-co-gray-title: rgb(158 158 158);
+}
+
+/* ── 본문 ───────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 16px 16px 48px;
+  background: var(--nv-background);
+  color: var(--nv-foreground);
+  font-family: system-ui, Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.7; /* 한글은 라틴보다 세로로 빽빽해 1.6 대신 1.7 */
+  word-break: break-word;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1 { font-size: 24px; font-weight: 700; line-height: 1.3; letter-spacing: -0.2px; margin: 24px 0 8px; }
+h2 { font-size: 20px; font-weight: 700; line-height: 1.3; letter-spacing: -0.2px; margin: 24px 0 8px; }
+h3 { font-size: 17px; font-weight: 600; line-height: 1.3; letter-spacing: -0.1px; margin: 24px 0 8px; }
+h4, h5, h6 { font-size: 16px; font-weight: 600; line-height: 1.4; margin: 24px 0 8px; }
+
+p { margin: 0 0 16px; }
+ul, ol { padding-left: 24px; margin: 0 0 16px; }
+li > ul, li > ol { margin-bottom: 0; }
+
+a {
+  color: var(--nv-link-external);
+  text-decoration: none;
+}
+
+.nv-wikilink {
+  color: var(--nv-accent);
+  cursor: pointer;
+}
+
+mark {
+  background: var(--nv-highlight);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--nv-border);
+  margin: 24px 0;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.nv-img-missing {
+  display: inline-block;
+  padding: 12px 16px;
+  border: 1px dashed var(--nv-border);
+  border-radius: 4px;
+  color: var(--nv-subtle-foreground);
+  font-size: 13px;
+}
+
+/* ── 코드 ───────────────────────────────────────────── */
+
+code {
+  font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+  font-size: 14px;
+  background: var(--nv-popover);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.nv-pre-wrap {
+  position: relative; /* 복사 버튼의 기준 — pre 는 스크롤 컨테이너라 안 됨 */
+  margin: 0 0 16px;
+}
+.nv-pre-wrap > pre {
+  margin: 0;
+}
+
+pre {
+  background: var(--nv-popover);
+  border-radius: 4px;
+  padding: 12px;
+  overflow-x: auto; /* 코드가 폭을 넘으면 블록만 스크롤 */
+  margin: 0 0 16px;
+  line-height: 1.55;
+}
+
+.nv-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: 1px solid var(--nv-border);
+  border-radius: 4px;
+  background: var(--nv-card);
+  color: var(--nv-muted-foreground);
+  font-size: 12px;
+  padding: 3px 8px;
+}
+.nv-copy:active {
+  background: var(--nv-muted);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* highlight.js 테마는 다크 기준으로 번들된다. 라이트에서는 배경만 우리
+   토큰을 따르고 토큰 색은 라이트용으로 뒤집는다. */
+html[data-nv-theme='light'] pre code.hljs,
+html[data-nv-theme='light'] pre {
+  background: var(--nv-popover);
+  color: var(--nv-foreground);
+}
+
+/* ── 인용문·표 ──────────────────────────────────────── */
+
+blockquote {
+  margin: 0 0 16px;
+  padding-left: 13px;
+  border-left: 3px solid var(--nv-primary);
+  color: var(--nv-muted-foreground);
+}
+
+.nv-table-wrap {
+  overflow-x: auto; /* 본문이 아니라 표만 가로 스크롤 */
+  margin: 0 0 16px;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+th, td {
+  border: 1px solid var(--nv-border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+th {
+  font-weight: 600;
+  background: var(--nv-card);
+}
+
+/* ── 콜아웃 (markdown-it-obsidian-callouts 출력 구조) ── */
+
+.callout {
+  --co: var(--nv-co-blue);
+  --co-title: var(--nv-co-blue-title);
+  background: rgb(var(--co) / 0.1);
+  border-left: 3px solid rgb(var(--co));
+  border-radius: 4px;
+  padding: 12px 12px 12px 16px;
+  margin: 0 0 16px;
+}
+
+.callout[data-callout='abstract'], .callout[data-callout='summary'], .callout[data-callout='tldr'],
+.callout[data-callout='tip'], .callout[data-callout='hint'], .callout[data-callout='important'] {
+  --co: var(--nv-co-cyan);
+  --co-title: var(--nv-co-cyan-title);
+}
+.callout[data-callout='success'], .callout[data-callout='check'], .callout[data-callout='done'] {
+  --co: var(--nv-co-green);
+  --co-title: var(--nv-co-green-title);
+}
+.callout[data-callout='question'], .callout[data-callout='help'], .callout[data-callout='faq'],
+.callout[data-callout='warning'], .callout[data-callout='caution'], .callout[data-callout='attention'] {
+  --co: var(--nv-co-orange);
+  --co-title: var(--nv-co-orange-title);
+}
+.callout[data-callout='failure'], .callout[data-callout='fail'], .callout[data-callout='missing'],
+.callout[data-callout='danger'], .callout[data-callout='error'], .callout[data-callout='bug'] {
+  --co: var(--nv-co-red);
+  --co-title: var(--nv-co-red-title);
+}
+.callout[data-callout='example'] {
+  --co: var(--nv-co-purple);
+  --co-title: var(--nv-co-purple-title);
+}
+.callout[data-callout='quote'], .callout[data-callout='cite'] {
+  --co: var(--nv-co-gray);
+  --co-title: var(--nv-co-gray-title);
+}
+
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--co-title);
+}
+
+.callout-title-icon { display: flex; }
+.callout-title-icon svg { width: 16px; height: 16px; stroke: var(--co-title); }
+
+.callout-content { color: var(--nv-foreground); }
+.callout-content > :first-child { margin-top: 8px; }
+.callout-content > :last-child { margin-bottom: 0; }
+
+/* 접기 콜아웃 */
+details.callout > summary { list-style: none; cursor: pointer; }
+details.callout > summary::-webkit-details-marker { display: none; }
+.callout-fold { margin-left: auto; }
+.callout-fold::after { content: '›'; display: inline-block; transform: rotate(90deg); transition: transform 180ms; color: var(--co-title); }
+details[open] > summary .callout-fold::after { transform: rotate(-90deg); }
+
+/* 중첩 콜아웃 */
+.callout .callout { margin-top: 8px; }
+
+/* ── mermaid ───────────────────────────────────────── */
+
+.nv-mermaid {
+  background: none;
+  padding: 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.nv-mermaid svg { max-width: 100%; height: auto; }
+
+/* ── KaTeX ─────────────────────────────────────────── */
+
+.katex-display {
+  overflow-x: auto; /* 긴 수식도 본문을 밀지 않는다 */
+  padding: 4px 0;
+}
