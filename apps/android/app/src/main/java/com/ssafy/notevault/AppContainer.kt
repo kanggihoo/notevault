@@ -1,0 +1,33 @@
+package com.ssafy.notevault
+
+import android.content.Context
+import androidx.datastore.preferences.preferencesDataStore
+import com.ssafy.notevault.db.VaultDatabase
+import com.ssafy.notevault.github.GithubClient
+import com.ssafy.notevault.settings.KeystoreTokenCipher
+import com.ssafy.notevault.settings.SettingsStore
+import com.ssafy.notevault.sync.VaultFiles
+import okhttp3.OkHttpClient
+import java.io.File
+
+private val Context.settingsDataStore by preferencesDataStore(name = "settings")
+
+/**
+ * 수동 DI. 앱 전체에서 하나씩만 있어야 하는 객체를 여기서 만든다 (Spring 의 @Configuration 역할).
+ * `by lazy` — 처음 쓰일 때 한 번만 만든다.
+ */
+class AppContainer(context: Context) {
+    private val app = context.applicationContext
+
+    val database: VaultDatabase by lazy { VaultDatabase.create(app) }
+
+    /** 앱 전용 폴더라 저장소 권한이 필요 없다. 앱을 지우면 같이 지워진다. */
+    val vaultFiles: VaultFiles by lazy { VaultFiles(File(app.filesDir, "vault").apply { mkdirs() }) }
+
+    val settingsStore: SettingsStore by lazy { SettingsStore(app.settingsDataStore, KeystoreTokenCipher()) }
+
+    /** 연결 풀을 공유하도록 OkHttpClient 는 하나만 둔다. */
+    private val http: OkHttpClient by lazy { OkHttpClient() }
+
+    fun githubClient(token: String): GithubClient = GithubClient(token, http)
+}

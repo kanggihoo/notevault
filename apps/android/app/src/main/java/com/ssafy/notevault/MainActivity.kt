@@ -1,15 +1,21 @@
 package com.ssafy.notevault
 
-import android.app.Activity
 import android.os.Bundle
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.ssafy.notevault.ui.NoteVaultNavHost
+import com.ssafy.notevault.ui.NoteVaultTheme
 
-/**
- * 1단계 자리표시자. 화면은 3단계(Compose)에서 만든다.
- */
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(TextView(this).apply { text = "NoteVault (Kotlin) — 1단계" })
+        enableEdgeToEdge()
+        val container = (application as NoteVaultApp).container
+        setContent {
+            NoteVaultTheme {
+                NoteVaultNavHost(container)
+            }
+        }
     }
 }

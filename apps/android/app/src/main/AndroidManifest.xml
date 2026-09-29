@@ -3,12 +3,19 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        allowBackup=false: 토큰은 Keystore 키로 암호화되는데, 키는 백업되지 않는다.
+        백업으로 복원된 암호문은 어차피 풀 수 없으므로 백업 자체를 끈다.
+    -->
     <application
+        android:name=".NoteVaultApp"
+        android:allowBackup="false"
         android:label="NoteVault"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
