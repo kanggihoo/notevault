@@ -1,9 +1,6 @@
-import type { ExpoConfig } from 'expo/config'
-
-// app.json 대신 app.config.ts 를 쓰는 이유는 GitHub OAuth client_id 를
-// 환경변수로 주입해야 하기 때문이다. client_id 는 비밀값이 아니지만
-// 나중에 OAuth App 을 교체하기 쉽도록 분리한다.
-const config: ExpoConfig = {
+// @ts-check
+/** @type {import('expo/config').ExpoConfig} */
+const config = {
   name: 'NoteVault',
   slug: 'notevault',
   version: '1.0.0',
@@ -49,4 +46,4 @@ const config: ExpoConfig = {
   },
 }
 
-export default config
+module.exports = config
