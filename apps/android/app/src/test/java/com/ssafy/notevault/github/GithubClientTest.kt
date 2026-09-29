@@ -147,4 +147,61 @@ class GithubClientTest {
         client.checkAccess(ref)
         assertEquals("/repos/kkh/obsidian", server.takeRequest().url.encodedPath)
     }
+
+    // ── 2단계: 트리 · 파일 ─────────────────────────────────────
+
+    @Test
+    fun `트리에서 blob 만 남기고 truncated 를 전달한다`() = runTest {
+        respond(
+            200,
+            """
+            {"sha":"head","truncated":false,"tree":[
+              {"path":"Dev","mode":"040000","sha":"d1","type":"tree"},
+              {"path":"Dev/a.md","mode":"100644","sha":"f1","size":10,"type":"blob"},
+              {"path":"Dev/attachments/i.png","mode":"100644","sha":"f2","size":999,"type":"blob"}
+            ]}
+            """.trimIndent(),
+        )
+
+        val result = client.getTree(ref, commitSha = "head")
+
+        assertEquals(false, result.truncated)
+        assertEquals(
+            listOf(RemoteEntry("Dev/a.md", "f1", 10), RemoteEntry("Dev/attachments/i.png", "f2", 999)),
+            result.entries,
+        )
+        val request = server.takeRequest()
+        assertEquals("/repos/kkh/obsidian/git/trees/head", request.url.encodedPath)
+        assertEquals("1", request.url.queryParameter("recursive"))
+    }
+
+    @Test
+    fun `파일 원문을 바이트로 받고 raw 형식을 요청한다`() = runTest {
+        respond(200, "# 제목\n본문")
+
+        val bytes = client.getRawFile(ref, path = "Dev/a.md", commitSha = "head")
+
+        assertEquals("# 제목\n본문", bytes.decodeToString())
+        val request = server.takeRequest()
+        assertEquals("application/vnd.github.raw+json", request.headers["Accept"])
+        assertEquals("head", request.url.queryParameter("ref"))
+    }
+
+    @Test
+    fun `파일 경로의 특수문자·한글·공백을 세그먼트별로 인코딩한다`() = runTest {
+        respond(200, "x")
+        client.getRawFile(ref, path = "C++(알고리즘)/attachments/Pasted image 1.png", commitSha = "head")
+
+        // 서버가 디코딩한 세그먼트가 원래 경로와 같아야 한다 — 슬래시는 구분자로 살아 있다.
+        assertEquals(
+            listOf("repos", "kkh", "obsidian", "contents", "C++(알고리즘)", "attachments", "Pasted image 1.png"),
+            server.takeRequest().url.pathSegments,
+        )
+    }
+
+    @Test
+    fun `파일 요청도 같은 오류 분류를 쓴다`() = runTest {
+        respond(404)
+        assertFailsWith<GithubException.NotFound> { client.getRawFile(ref, "Dev/gone.md", "head") }
+    }
 }

@@ -18,6 +18,15 @@ data class RepoRef(val owner: String, val repo: String, val branch: String)
 
 data class RateLimit(val remaining: Int, val limit: Int, val resetAt: Instant)
 
+/** Git Tree API 응답의 blob 한 건. [sha] 는 내용 해시라 이것만 비교하면 변경 여부를 안다. */
+data class RemoteEntry(val path: String, val sha: String, val size: Long)
+
+data class TreeResult(
+    val entries: List<RemoteEntry>,
+    /** 항목 10만 개 초과 시 true — 폴더별 조회 폴백이 필요하다. */
+    val truncated: Boolean,
+)
+
 /**
  * GitHub API 오류 분류. RN 판은 401·403 을 모두 'auth' 로 뭉쳐서
  * "재연결 필요" 원인을 알 수 없었다 — 여기서는 나누고 GitHub 메시지를 보존한다.
@@ -55,8 +64,35 @@ class GithubClient(
             .addPathSegment("commits")
             .addPathSegment(ref.branch) // 세그먼트 단위로 인코딩된다: feature/x → feature%2Fx
             .build()
-        val body = request(url)
-        return json.decodeFromString<CommitResponse>(body).sha
+        return decode<CommitResponse>(request(url)).sha
+    }
+
+    /** 2단계: 전체 트리 1회 호출. blob 만 남긴다 (tree 항목은 폴더). */
+    suspend fun getTree(ref: RepoRef, commitSha: String): TreeResult {
+        val url = repoUrl(ref).newBuilder()
+            .addPathSegments("git/trees")
+            .addPathSegment(commitSha)
+            .addQueryParameter("recursive", "1")
+            .build()
+        val body = decode<TreeResponse>(request(url))
+        return TreeResult(
+            entries = body.tree
+                .filter { it.type == "blob" }
+                .map { RemoteEntry(path = it.path, sha = it.sha, size = it.size ?: 0) },
+            truncated = body.truncated,
+        )
+    }
+
+    /**
+     * 파일 원문 다운로드. ref 를 HEAD SHA 로 고정해 동기화 도중 push 가 와도 일관된 스냅샷을 받는다.
+     */
+    suspend fun getRawFile(ref: RepoRef, path: String, commitSha: String): ByteArray {
+        val url = repoUrl(ref).newBuilder()
+            .addPathSegment("contents")
+            .apply { path.split('/').forEach { addPathSegment(it) } } // 세그먼트별 인코딩, 슬래시는 유지
+            .addQueryParameter("ref", commitSha)
+            .build()
+        return request(url, accept = "application/vnd.github.raw+json")
     }
 
     /** 설정 화면의 "연결 테스트". 저장소에 접근 가능한지만 본다. */
@@ -70,12 +106,15 @@ class GithubClient(
         .addPathSegment(ref.repo)
         .build()
 
-    /** 요청 → 헤더 기록 → 상태 코드 분류. 성공이면 본문 문자열을 돌려준다. */
-    private suspend fun request(url: HttpUrl): String = withContext(Dispatchers.IO) {
+    /** 요청 → 헤더 기록 → 상태 코드 분류. 성공이면 본문 바이트를 돌려준다. */
+    private suspend fun request(
+        url: HttpUrl,
+        accept: String = "application/vnd.github+json",
+    ): ByteArray = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $token")
-            .header("Accept", "application/vnd.github+json")
+            .header("Accept", accept)
             .header("X-GitHub-Api-Version", "2022-11-28")
             .build()
 
@@ -87,10 +126,12 @@ class GithubClient(
 
         response.use {
             recordHeaders(it)
-            val body = it.body.string()
-            if (it.isSuccessful) body else throw classify(it, body)
+            val body = it.body.bytes()
+            if (it.isSuccessful) body else throw classify(it, body.decodeToString())
         }
     }
+
+    private inline fun <reified T> decode(body: ByteArray): T = json.decodeFromString<T>(body.decodeToString())
 
     private fun recordHeaders(response: Response) {
         val remaining = response.header("x-ratelimit-remaining")?.toIntOrNull()
@@ -125,6 +166,12 @@ class GithubClient(
 
     @Serializable
     private data class CommitResponse(val sha: String)
+
+    @Serializable
+    private data class TreeResponse(val truncated: Boolean, val tree: List<TreeItem>)
+
+    @Serializable
+    private data class TreeItem(val path: String, val sha: String, val type: String, val size: Long? = null)
 
     @Serializable
     private data class ErrorResponse(val message: String? = null)
