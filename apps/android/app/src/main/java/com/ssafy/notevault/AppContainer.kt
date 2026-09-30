@@ -9,6 +9,7 @@ import com.ssafy.notevault.settings.KeystoreTokenCipher
 import com.ssafy.notevault.settings.SettingsStore
 import com.ssafy.notevault.sync.SyncController
 import com.ssafy.notevault.sync.VaultFiles
+import com.ssafy.notevault.vault.VaultWeb
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -33,6 +34,9 @@ class AppContainer(context: Context) {
     val syncController: SyncController by lazy {
         SyncController(settingsStore, database.dao(), vaultFiles, ::githubClient)
     }
+
+    /** WebView 가 렌더러(assets)와 볼트 파일을 https 주소로 읽게 해 준다. */
+    val webAssetLoader by lazy { VaultWeb.assetLoader(app, vaultFiles.root) }
 
     /** E2E 테스트가 가짜 GitHub(MockWebServer) 주소로 바꿔 끼운다. 앱에서는 건드리지 않는다. */
     @VisibleForTesting

@@ -29,6 +29,10 @@ abstract class VaultDao {
     @Query("SELECT EXISTS(SELECT 1 FROM files WHERE path = :path)")
     abstract suspend fun hasFile(path: String): Boolean
 
+    /** 링크·이미지 해석용: 지금 받아 둔 모든 파일 경로. */
+    @Query("SELECT path FROM files")
+    abstract suspend fun getAllPaths(): List<String>
+
     /** 서랍의 파일 트리·검색용. 경로순. */
     @Query("SELECT path FROM files ORDER BY path")
     abstract fun observeFilePaths(): Flow<List<String>>

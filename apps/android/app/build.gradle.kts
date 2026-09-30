@@ -41,6 +41,35 @@ tasks.register("e2e") {
     dependsOn("connectedDebugAndroidTest")
 }
 
+/**
+ * 렌더러 번들(markdown-it·mermaid·KaTeX·highlight.js 를 한 파일로 묶은 index.html)을 앱 assets 로 가져온다.
+ * 원본은 저장소의 assets/renderer — `npm run renderer:build` 로 다시 만든다. 빌드할 때마다 최신본이 복사된다.
+ */
+abstract class SyncRendererTask : DefaultTask() {
+    @get:InputFile
+    abstract val source: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val target = outputDir.get().asFile.resolve("renderer").apply { mkdirs() }
+        source.get().asFile.copyTo(target.resolve("index.html"), overwrite = true)
+    }
+}
+
+val syncRenderer = tasks.register<SyncRendererTask>("syncRenderer") {
+    source.set(rootProject.layout.projectDirectory.file("../../assets/renderer/dist/index.html"))
+    outputDir.set(layout.buildDirectory.dir("generated/renderer-assets"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(syncRenderer, SyncRendererTask::outputDir)
+    }
+}
+
 room {
     // 스키마 JSON 을 커밋해 두면 버전을 올릴 때 마이그레이션을 검증할 수 있다.
     schemaDirectory("$projectDir/schemas")
@@ -54,6 +83,7 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.webkit)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)

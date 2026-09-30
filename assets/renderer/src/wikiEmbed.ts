@@ -64,7 +64,8 @@ export function wikiEmbed(md: MarkdownIt): void {
     const src = target.split('/').map(encodeURIComponent).join('/')
     const alt = md.utils.escapeHtml(target)
 
-    return `<img class="nv-img" src="${src}" alt="${alt}" style="${style}" loading="lazy">`
+    // data-target: 앱이 볼트 전체에서 찾은 실제 경로로 src 를 바꿀 때 쓰는 원래 이름.
+    return `<img class="nv-img" src="${src}" alt="${alt}" data-target="${alt}" style="${style}" loading="lazy">`
   }
 
   md.renderer.rules.wiki_link = (tokens, idx) => {

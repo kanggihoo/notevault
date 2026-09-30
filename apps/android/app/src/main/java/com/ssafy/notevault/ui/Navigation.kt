@@ -44,7 +44,13 @@ fun NoteVaultNavHost(container: AppContainer) {
             SubscriptionsScreen(container, onBack = { nav.popBackStack() })
         }
         composable<NoteDestination> { entry ->
-            NoteScreen(container, path = entry.toRoute<NoteDestination>().path, onBack = { nav.popBackStack() })
+            NoteScreen(
+                container,
+                path = entry.toRoute<NoteDestination>().path,
+                onBack = { nav.popBackStack() },
+                // 노트 안 링크로 다른 노트를 연다. 뒤로 가기로 원래 노트에 돌아온다.
+                onOpenFile = { nav.navigate(NoteDestination(it)) },
+            )
         }
     }
 }

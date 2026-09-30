@@ -1,11 +1,14 @@
 package com.ssafy.notevault.vault
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +41,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.content.getSystemService
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ssafy.notevault.AppContainer
@@ -46,11 +51,30 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteScreen(container: AppContainer, path: String, onBack: () -> Unit) {
+fun NoteScreen(container: AppContainer, path: String, onBack: () -> Unit, onOpenFile: (String) -> Unit) {
     val vm = viewModel(key = path) { NoteViewModel(path, container.database.dao(), container.vaultFiles) }
     val content by vm.content.collectAsStateWithLifecycle()
     val bookmarked by vm.bookmarked.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val dark = isSystemInDarkTheme()
+
+    fun openOrToast(resolved: String?, label: String) {
+        if (resolved != null) {
+            onOpenFile(resolved)
+        } else {
+            Toast.makeText(context, "'$label' 을(를) 찾을 수 없어요. 받지 않은 폴더일 수 있어요.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onRendererEvent: (RendererEvent) -> Unit = { event ->
+        when (event) {
+            is RendererEvent.Wikilink -> openOrToast(vm.resolveWikilink(event.target), event.target)
+            is RendererEvent.Relative -> openOrToast(vm.resolveRelative(event.href), event.href)
+            is RendererEvent.External -> VaultWeb.openInBrowser(context, event.href.toUri())
+            is RendererEvent.Copy -> context.getSystemService<ClipboardManager>()
+                ?.setPrimaryClip(ClipData.newPlainText("code", event.text))
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -75,8 +99,16 @@ fun NoteScreen(container: AppContainer, path: String, onBack: () -> Unit) {
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val c = content) {
                 NoteContent.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                is NoteContent.Markdown -> MarkdownView(
+                    request = c.request,
+                    dark = dark,
+                    loader = container.webAssetLoader,
+                    onEvent = onRendererEvent,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                NoteContent.HtmlPage -> HtmlPageView(path, container.webAssetLoader, Modifier.fillMaxSize())
                 is NoteContent.Text -> SelectionContainer {
-                    // 4단계 전까지는 원문 그대로. 긴 코드 줄은 가로로 스크롤한다.
+                    // 코드·설정 파일은 원문 그대로. 긴 줄은 가로로 스크롤한다.
                     Text(
                         c.text,
                         modifier = Modifier

@@ -1,13 +1,16 @@
 /**
  * WebView 안에서 실행되는 렌더러 엔트리.
  *
- * RN → WebView 메시지
- *   { type: 'render', markdown: string, noteDir: string, theme: 'dark'|'light' }
+ * 앱 → WebView 메시지
+ *   { type: 'render', markdown, noteDir, theme, images?, baseUrl? }
+ *   RN 은 postMessage 로, Android(Kotlin) 앱은 evaluateJavascript("nvReceive(...)") 로 보낸다.
  *
  * WebView → RN 메시지
  *   { type: 'ready' }                          렌더러 초기화 완료
  *   { type: 'wikilink', target: string }       위키링크 탭
  *   { type: 'external', href: string }         외부 링크 탭 → 시스템 브라우저
+ *   { type: 'relative', href: string }         [x](../a.md) 같은 볼트 안 상대 링크 탭
+ *   { type: 'copy', text: string }             코드블록 복사 버튼
  *   { type: 'error', message: string }         렌더 실패
  *
  * base URL 은 볼트 루트로 고정한다. 노트가 바뀔 때마다 WebView 를 리로드하지
@@ -32,6 +35,9 @@ const callouts = (calloutsPkg as any).default ?? calloutsPkg
 declare global {
   interface Window {
     ReactNativeWebView?: { postMessage(data: string): void }
+    /** Kotlin 앱이 @JavascriptInterface 로 붙이는 통로 */
+    NoteVault?: { postMessage(data: string): void }
+    nvReceive?: (raw: string) => void
   }
 }
 
@@ -41,10 +47,19 @@ type RenderMessage = {
   /** 노트가 위치한 폴더의 볼트 상대 경로. 루트 노트면 '' */
   noteDir: string
   theme: 'dark' | 'light'
+  /**
+   * ![[이름]] → 볼트 기준 실제 경로. 앱이 볼트 전체에서 Obsidian 규칙으로 찾아 넘긴다.
+   * 없으면(RN 판) 예전처럼 노트 폴더 기준 상대 경로로 해석한다.
+   */
+  images?: Record<string, string>
+  /** 볼트 루트 URL. 상대 경로 이미지·링크의 기준 (<base href>). */
+  baseUrl?: string
 }
 
 function post(message: object): void {
-  window.ReactNativeWebView?.postMessage(JSON.stringify(message))
+  const data = JSON.stringify(message)
+  window.ReactNativeWebView?.postMessage(data)
+  window.NoteVault?.postMessage(data)
 }
 
 const md = new MarkdownIt({
@@ -81,10 +96,31 @@ function applyTheme(theme: 'dark' | 'light'): void {
   }
 }
 
-/** 상대 경로 이미지에 noteDir 를 붙인다. base URL 이 볼트 루트이기 때문이다. */
-function resolveImages(noteDir: string): void {
-  const prefix = noteDir ? noteDir.split('/').map(encodeURIComponent).join('/') + '/' : ''
+const encodePath = (path: string) => path.split('/').map(encodeURIComponent).join('/')
+
+/** <base href> 를 볼트 루트로 맞춘다. 상대 경로가 이 주소를 기준으로 풀린다. */
+function applyBase(baseUrl: string | undefined): void {
+  if (!baseUrl) return
+  let base = document.querySelector('base')
+  if (!base) {
+    base = document.createElement('base')
+    document.head.prepend(base)
+  }
+  base.href = baseUrl
+}
+
+/**
+ * 이미지 경로를 볼트 루트 기준으로 바꾼다.
+ * ![[이름]] 은 앱이 찾아 준 실제 경로를 쓰고, 나머지 상대 경로에는 noteDir 를 붙인다.
+ */
+function resolveImages(noteDir: string, images: Record<string, string> = {}): void {
+  const prefix = noteDir ? encodePath(noteDir) + '/' : ''
   root.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+    const target = img.dataset.target
+    if (target && images[target]) {
+      img.setAttribute('src', encodePath(images[target]))
+      return
+    }
     const src = img.getAttribute('src') ?? ''
     // 절대 URL(http, file, data)은 그대로 둔다.
     if (/^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('/')) return
@@ -139,11 +175,12 @@ function installImageFallback(): void {
 
 async function render(message: RenderMessage): Promise<void> {
   applyTheme(message.theme)
+  applyBase(message.baseUrl)
 
   const source = normalizeCallouts(stripFrontmatter(message.markdown))
   root.innerHTML = md.render(source)
 
-  resolveImages(message.noteDir)
+  resolveImages(message.noteDir, message.images)
   installImageFallback()
   installCodeCopyButtons()
 
@@ -174,6 +211,8 @@ async function render(message: RenderMessage): Promise<void> {
 document.addEventListener('click', (event) => {
   const anchor = (event.target as HTMLElement).closest('a')
   if (!anchor) return
+  const rawHref = anchor.getAttribute('href') ?? ''
+  if (rawHref.startsWith('#')) return // 같은 문서 안 이동(각주 등)은 브라우저 기본 동작
   event.preventDefault()
 
   const wikilink = anchor.getAttribute('data-wikilink')
@@ -181,10 +220,13 @@ document.addEventListener('click', (event) => {
     post({ type: 'wikilink', target: wikilink })
     return
   }
-  const href = anchor.getAttribute('href') ?? ''
+  const href = rawHref
   if (/^https?:/i.test(href)) {
     // 외부 링크는 WebView 안에서 열지 않고 시스템 브라우저로 넘긴다.
     post({ type: 'external', href })
+  } else if (href && !/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+    // [x](../a.md) — 볼트 안 상대 링크. 앱이 노트 위치 기준으로 풀어서 연다.
+    post({ type: 'relative', href: decodeURIComponent(href) })
   }
 })
 
@@ -198,7 +240,10 @@ function onMessage(raw: string): void {
   }
 }
 
-// Android WebView 는 document 에, iOS 는 window 에 message 이벤트가 온다.
+// Kotlin 앱: evaluateJavascript("nvReceive(<json 문자열>)")
+window.nvReceive = onMessage
+
+// RN: Android WebView 는 document 에, iOS 는 window 에 message 이벤트가 온다.
 document.addEventListener('message', (e) => onMessage((e as MessageEvent).data))
 window.addEventListener('message', (e) => onMessage((e as MessageEvent).data))
 
