@@ -1,6 +1,6 @@
 # 모든 의존성 버전을 한 곳에서 관리한다 (Spring 의 BOM 과 같은 역할).
 [versions]
-agp = "9.4.1"
+agp = "9.3.0"
 kotlin = "2.4.20"
 okhttp = "5.5.0"
 serialization = "1.11.0"
