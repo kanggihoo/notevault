@@ -2,7 +2,9 @@ package com.ssafy.notevault.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -10,9 +12,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,14 +25,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ssafy.notevault.AppContainer
+import com.ssafy.notevault.github.describe
 import com.ssafy.notevault.github.expiryNotice
+import com.ssafy.notevault.sync.SyncOutcome
+import com.ssafy.notevault.sync.SyncProgress
+import com.ssafy.notevault.sync.SyncStatus
 import java.time.Instant
 
-/** 3a 단계 자리표시자. 3b·3c 에서 파일 트리·동기화 버튼이 들어온다. */
+/** 3b: 저장소 정보 · 동기화 · 구독 관리. 파일 트리는 3c 에서 들어온다. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit) {
+fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit, onOpenSubscriptions: () -> Unit) {
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(initialValue = null)
+    val status by container.syncController.status.collectAsStateWithLifecycle()
+    val fileCount by container.database.dao().observeFileCount().collectAsStateWithLifecycle(initialValue = 0)
 
     Scaffold(
         topBar = {
@@ -48,11 +59,60 @@ fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit) {
             if (current?.tokenHint == null || repo == null) {
                 Text("GitHub 토큰과 저장소를 먼저 설정하세요.", style = MaterialTheme.typography.bodyLarge)
                 Button(onClick = onOpenSettings) { Text("설정 열기") }
-            } else {
-                Text("${repo.owner}/${repo.repo} @ ${repo.branch}", style = MaterialTheme.typography.titleMedium)
-                ExpiryBanner(expiryNotice(current.tokenExpiresAt, Instant.now()))
-                Text("다음 단계에서 구독 관리와 동기화가 들어옵니다.", style = MaterialTheme.typography.bodyMedium)
+                return@Column
             }
+
+            Text("${repo.owner}/${repo.repo} @ ${repo.branch}", style = MaterialTheme.typography.titleMedium)
+            ExpiryBanner(expiryNotice(current.tokenExpiresAt, Instant.now()))
+            Text("받은 파일 ${fileCount}개", style = MaterialTheme.typography.bodyMedium)
+
+            val running = status is SyncStatus.Running
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = container.syncController::sync, enabled = !running) { Text("동기화") }
+                OutlinedButton(onClick = onOpenSubscriptions, enabled = !running) { Text("구독 관리") }
+            }
+            SyncStatusView(status, onCancel = container.syncController::cancel)
         }
     }
 }
+
+@Composable
+private fun SyncStatusView(status: SyncStatus, onCancel: () -> Unit) {
+    when (status) {
+        SyncStatus.Idle -> Unit
+        is SyncStatus.Running -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val progress = status.progress
+            if (progress is SyncProgress.Downloading) {
+                LinearProgressIndicator(progress = { progress.done / progress.total.toFloat() }, modifier = Modifier.fillMaxWidth())
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            Row {
+                Text(progressLabel(progress), modifier = Modifier.weight(1f).padding(top = 12.dp))
+                TextButton(onClick = onCancel) { Text("취소") }
+            }
+        }
+        is SyncStatus.Finished -> MessageCard(outcomeLabel(status.outcome), isError = hasFailures(status.outcome))
+        is SyncStatus.Failed -> MessageCard(status.message, isError = true)
+    }
+}
+
+fun progressLabel(progress: SyncProgress): String = when (progress) {
+    SyncProgress.Checking -> "변경 확인 중…"
+    SyncProgress.Planning -> "받을 목록 계산 중…"
+    is SyncProgress.Downloading -> "받는 중 ${progress.done} / ${progress.total}\n${progress.currentPath}"
+    SyncProgress.Deleting -> "정리 중…"
+}
+
+fun outcomeLabel(outcome: SyncOutcome): String = when (outcome) {
+    SyncOutcome.UpToDate -> "이미 최신입니다"
+    is SyncOutcome.Synced -> when {
+        outcome.cancelled -> "취소됨 · 받은 파일 ${outcome.downloaded}개는 남아 있어요. 다시 동기화하면 이어서 받아요."
+        outcome.failed.isNotEmpty() ->
+            "${outcome.failed.size}개 실패 — 다시 동기화하면 실패한 것만 다시 받아요.\n" +
+                "예: ${outcome.failed.first().path}\n${describe(outcome.failed.first().error)}"
+        else -> "새로 ${outcome.downloaded} · 삭제 ${outcome.deleted}"
+    }
+}
+
+private fun hasFailures(outcome: SyncOutcome) = outcome is SyncOutcome.Synced && outcome.failed.isNotEmpty()

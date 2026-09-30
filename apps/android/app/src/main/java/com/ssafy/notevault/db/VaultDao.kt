@@ -29,6 +29,10 @@ abstract class VaultDao {
     @Query("SELECT EXISTS(SELECT 1 FROM files WHERE path = :path)")
     abstract suspend fun hasFile(path: String): Boolean
 
+    /** 홈 화면용: 받아둔 파일 수. DB 가 바뀔 때마다 새 값이 흐른다. */
+    @Query("SELECT COUNT(*) FROM files")
+    abstract fun observeFileCount(): Flow<Int>
+
     /** 저장공간 화면용: 받아둔 총 바이트. */
     @Query("SELECT COALESCE(SUM(size), 0) FROM files")
     abstract suspend fun getTotalSize(): Long
@@ -129,6 +133,30 @@ abstract class VaultDao {
 
     @Query("DELETE FROM recents WHERE path NOT IN (SELECT path FROM recents ORDER BY opened_at DESC LIMIT $RECENTS_LIMIT)")
     protected abstract suspend fun trimRecents()
+
+    // ── 전체 초기화 ────────────────────────────────────────────
+
+    /** 저장소를 바꿀 때 쓴다. 이전 저장소의 모든 기록을 지운다. */
+    @Transaction
+    open suspend fun clearAll() {
+        clearFiles()
+        clearSubscriptions()
+        clearMeta()
+        clearBookmarks()
+        clearRecents()
+    }
+
+    @Query("DELETE FROM files")
+    protected abstract suspend fun clearFiles()
+
+    @Query("DELETE FROM meta")
+    protected abstract suspend fun clearMeta()
+
+    @Query("DELETE FROM bookmarks")
+    protected abstract suspend fun clearBookmarks()
+
+    @Query("DELETE FROM recents")
+    protected abstract suspend fun clearRecents()
 
     private companion object {
         /** 999 보다 작게 잡는다. */

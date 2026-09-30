@@ -43,6 +43,8 @@ class SettingsViewModel(
     private val store: SettingsStore,
     private val clientFactory: (token: String) -> GithubClient,
     private val clock: () -> Instant = Instant::now,
+    /** 저장소가 바뀌면 호출된다 — 이전 저장소의 파일·DB 를 지워야 한다. */
+    private val onRepoChanged: suspend () -> Unit = {},
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState())
@@ -104,6 +106,8 @@ class SettingsViewModel(
         val repoName = input.repoInput.trim()
         if (owner.isEmpty() || repoName.isEmpty()) return fail("저장소 owner 와 repo 를 입력하세요.")
         val repo = RepoRef(owner, repoName, input.branchInput.trim().ifEmpty { "main" })
+        val previous = store.settings.first().repo
+        if (previous != null && previous != repo) onRepoChanged() // 다른 저장소의 파일이 섞이지 않게
         store.saveRepo(repo)
 
         val client = clientFactory(token)

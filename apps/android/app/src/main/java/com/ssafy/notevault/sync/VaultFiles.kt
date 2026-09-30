@@ -32,6 +32,13 @@ class VaultFiles(val root: File) {
         Unit
     }
 
+    /** 볼트 폴더를 통째로 비운다 (저장소 변경 시). */
+    suspend fun deleteAll() = withContext(Dispatchers.IO) {
+        root.deleteRecursively()
+        root.mkdirs()
+        Unit
+    }
+
     suspend fun readText(relPath: String): String = withContext(Dispatchers.IO) { resolve(relPath).readText() }
 
     fun exists(relPath: String): Boolean = resolve(relPath).exists()

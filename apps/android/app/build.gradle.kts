@@ -18,6 +18,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -28,6 +29,16 @@ android {
         // Robolectric 이 AndroidManifest·리소스를 읽을 수 있게 한다.
         unitTests.isIncludeAndroidResources = true
     }
+}
+
+/**
+ * `./gradlew e2e` — 연결된 에뮬레이터·폰에서 앱 전체 통합 테스트(src/androidTest)를 돌린다.
+ * package.json 의 "scripts": { "e2e": ... } 에 해당한다.
+ */
+tasks.register("e2e") {
+    group = "verification"
+    description = "에뮬레이터/폰에서 앱 전체 + 가짜 GitHub 통합 테스트"
+    dependsOn("connectedDebugAndroidTest")
 }
 
 room {
@@ -59,4 +70,12 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.kotlin.test.junit)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

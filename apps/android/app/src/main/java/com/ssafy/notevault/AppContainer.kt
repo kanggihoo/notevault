@@ -1,12 +1,16 @@
 package com.ssafy.notevault
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.preferencesDataStore
 import com.ssafy.notevault.db.VaultDatabase
 import com.ssafy.notevault.github.GithubClient
 import com.ssafy.notevault.settings.KeystoreTokenCipher
 import com.ssafy.notevault.settings.SettingsStore
+import com.ssafy.notevault.sync.SyncController
 import com.ssafy.notevault.sync.VaultFiles
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.io.File
 
@@ -26,8 +30,16 @@ class AppContainer(context: Context) {
 
     val settingsStore: SettingsStore by lazy { SettingsStore(app.settingsDataStore, KeystoreTokenCipher()) }
 
+    val syncController: SyncController by lazy {
+        SyncController(settingsStore, database.dao(), vaultFiles, ::githubClient)
+    }
+
+    /** E2E 테스트가 가짜 GitHub(MockWebServer) 주소로 바꿔 끼운다. 앱에서는 건드리지 않는다. */
+    @VisibleForTesting
+    var githubBaseUrl: HttpUrl = "https://api.github.com/".toHttpUrl()
+
     /** 연결 풀을 공유하도록 OkHttpClient 는 하나만 둔다. */
     private val http: OkHttpClient by lazy { OkHttpClient() }
 
-    fun githubClient(token: String): GithubClient = GithubClient(token, http)
+    fun githubClient(token: String): GithubClient = GithubClient(token, http, githubBaseUrl)
 }

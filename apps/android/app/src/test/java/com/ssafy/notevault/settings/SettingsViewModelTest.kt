@@ -29,6 +29,7 @@ class SettingsViewModelTest {
     private lateinit var server: MockWebServer
     private lateinit var store: SettingsStore
     private lateinit var vm: SettingsViewModel
+    private var repoChangedCalls = 0
 
     private val plainCipher = object : TokenCipher {
         override fun encrypt(plain: ByteArray) = plain
@@ -45,6 +46,7 @@ class SettingsViewModelTest {
             store = store,
             clientFactory = { token -> GithubClient(token, baseUrl = server.url("/")) },
             clock = { Instant.parse("2026-09-29T00:00:00Z") },
+            onRepoChanged = { repoChangedCalls += 1 },
         )
     }
 
@@ -114,5 +116,21 @@ class SettingsViewModelTest {
 
         assertTrue("저장소" in failed.message, failed.message)
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `저장소가 바뀌면 볼트 초기화를 요청한다 — 같으면 요청하지 않는다`() = runTest {
+        store.saveRepo(RepoRef("kanggihoo", "obsidian", "main"))
+        repeat(2) { server.enqueue(MockResponse.Builder().code(200).body("""{"sha":"abc"}""").build()) }
+
+        fillForm() // 같은 저장소
+        vm.onSaveAndTest()
+        awaitResult()
+        assertEquals(0, repoChangedCalls)
+
+        vm.onRepoInput("other-vault")
+        vm.onSaveAndTest()
+        vm.state.first { it.connection is ConnectionState.Ok && store.settings.first().repo?.repo == "other-vault" }
+        assertEquals(1, repoChangedCalls)
     }
 }

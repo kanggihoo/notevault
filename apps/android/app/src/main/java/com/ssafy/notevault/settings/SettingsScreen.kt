@@ -39,7 +39,13 @@ import com.ssafy.notevault.ui.NoteVaultTheme
 /** ViewModel 을 만들고 상태를 구독하는 바깥 껍데기. 실제 그리기는 [SettingsContent] 가 한다. */
 @Composable
 fun SettingsScreen(container: AppContainer, onBack: () -> Unit) {
-    val vm = viewModel { SettingsViewModel(container.settingsStore, container::githubClient) }
+    val vm = viewModel {
+        SettingsViewModel(
+            store = container.settingsStore,
+            clientFactory = container::githubClient,
+            onRepoChanged = container.syncController::resetVault,
+        )
+    }
     val state by vm.state.collectAsStateWithLifecycle()
 
     SettingsContent(

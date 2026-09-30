@@ -77,6 +77,11 @@ class SettingsStore(private val dataStore: DataStore<Preferences>, private val c
         dataStore.edit { if (at == null) it.remove(TOKEN_EXPIRES_AT) else it[TOKEN_EXPIRES_AT] = at.epochSecond }
     }
 
+    /** 모든 설정을 지운다. E2E 테스트가 매번 빈 상태에서 시작하려고 쓴다. */
+    suspend fun clearAll() {
+        dataStore.edit { it.clear() }
+    }
+
     private companion object {
         val TOKEN = stringPreferencesKey("token_encrypted")
         val TOKEN_HINT = stringPreferencesKey("token_hint")
