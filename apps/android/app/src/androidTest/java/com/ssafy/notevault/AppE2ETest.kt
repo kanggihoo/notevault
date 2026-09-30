@@ -109,22 +109,51 @@ class AppE2ETest {
         compose.onNodeWithText("Bad credentials", substring = true).assertExists()
     }
 
-    @Test
-    fun 설정_구독_동기화까지_한_번에() {
+    /** 설정 → 구독(spring 만) → 동기화. spring 아래 2개를 받는다. */
+    private fun setUpAndSyncSpring() {
         fillSettingsAndTest("github_pat_GOOD")
         waitForText("연결됨")
         compose.onNodeWithContentDescription("뒤로").performClick()
 
-        // 홈 → 구독 관리 → spring 폴더만 고른다
         compose.onNodeWithText("구독 관리").performClick()
         waitForText("볼트 전체")
         compose.onNodeWithText("spring").performClick()
         compose.onNodeWithText("저장하고 동기화", substring = true).performClick()
-
-        // 저장하면 홈으로 돌아와 동기화가 돈다 — spring 아래 2개만 받는다
         waitForText("새로 2")
+    }
+
+    @Test
+    fun 설정_구독_동기화까지_한_번에() {
+        setUpAndSyncSpring()
+
         compose.onNodeWithText("받은 파일 2개").assertExists()
         assertTrue(container.vaultFiles.exists("spring/AOP/b.md"))
         assertEquals(false, container.vaultFiles.exists("알고리즘/x.md"))
+    }
+
+    @Test
+    fun 서랍에서_노트를_열고_즐겨찾기하면_목록에_남는다() {
+        setUpAndSyncSpring()
+
+        // 서랍 → spring 펼치기 → a.md (확장자 없이 "a" 로 보인다)
+        compose.onNodeWithContentDescription("메뉴").performClick()
+        compose.onNodeWithText("spring").performClick()
+        compose.onNodeWithText("a").performClick()
+
+        waitForText("# a.md") // 가짜 GitHub 이 준 본문
+        compose.onNodeWithContentDescription("즐겨찾기 추가").performClick()
+        compose.onNodeWithContentDescription("즐겨찾기 해제").assertExists()
+        compose.onNodeWithContentDescription("뒤로").performClick()
+
+        // 즐겨찾기·최근 탭에 남아 있다
+        compose.onNodeWithContentDescription("메뉴").performClick()
+        compose.onNodeWithText("즐겨찾기").performClick()
+        compose.onNodeWithText("a").assertExists()
+        compose.onNodeWithText("최근").performClick()
+        compose.onNodeWithText("a").assertExists()
+
+        // 검색: 파일 이름으로 찾는다
+        compose.onNodeWithText("파일 이름 검색").performTextInput("b")
+        waitForText("spring/AOP") // 결과 아래에 폴더 경로가 보인다
     }
 }

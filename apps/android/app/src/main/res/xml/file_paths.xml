@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 로 내보낼 수 있는 폴더: 앱 전용 폴더의 vault/ 만. -->
+<paths>
+    <files-path name="vault" path="vault/" />
+</paths>

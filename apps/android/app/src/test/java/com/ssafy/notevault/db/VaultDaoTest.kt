@@ -87,6 +87,16 @@ class VaultDaoTest {
         assertEquals(350L, dao.getTotalSize())
     }
 
+    @Test
+    fun `받은 파일 경로를 관찰한다 — 바뀌면 새 목록이 흐른다`() = runTest {
+        dao.upsertFile(file("b.md"))
+        dao.upsertFile(file("a.md"))
+        assertEquals(listOf("a.md", "b.md"), dao.observeFilePaths().first())
+
+        dao.deleteFiles(listOf("a.md"))
+        assertEquals(listOf("b.md"), dao.observeFilePaths().first())
+    }
+
     // ── subscriptions · meta ───────────────────────────────────
 
     @Test

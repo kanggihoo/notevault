@@ -29,6 +29,10 @@ abstract class VaultDao {
     @Query("SELECT EXISTS(SELECT 1 FROM files WHERE path = :path)")
     abstract suspend fun hasFile(path: String): Boolean
 
+    /** 서랍의 파일 트리·검색용. 경로순. */
+    @Query("SELECT path FROM files ORDER BY path")
+    abstract fun observeFilePaths(): Flow<List<String>>
+
     /** 홈 화면용: 받아둔 파일 수. DB 가 바뀔 때마다 새 값이 흐른다. */
     @Query("SELECT COUNT(*) FROM files")
     abstract fun observeFileCount(): Flow<Int>

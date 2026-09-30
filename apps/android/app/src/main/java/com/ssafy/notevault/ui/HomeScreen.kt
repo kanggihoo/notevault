@@ -7,12 +7,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -21,21 +26,70 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ssafy.notevault.AppContainer
 import com.ssafy.notevault.github.describe
 import com.ssafy.notevault.github.expiryNotice
 import com.ssafy.notevault.sync.SyncOutcome
 import com.ssafy.notevault.sync.SyncProgress
 import com.ssafy.notevault.sync.SyncStatus
+import com.ssafy.notevault.vault.VaultBrowserViewModel
+import com.ssafy.notevault.vault.VaultDrawerContent
+import kotlinx.coroutines.launch
 import java.time.Instant
 
-/** 3b: 저장소 정보 · 동기화 · 구독 관리. 파일 트리는 3c 에서 들어온다. */
+/** 홈: 왼쪽 서랍(파일 트리·검색·즐겨찾기·최근) + 저장소 정보·동기화·구독 관리. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit, onOpenSubscriptions: () -> Unit) {
+fun HomeScreen(
+    container: AppContainer,
+    onOpenSettings: () -> Unit,
+    onOpenSubscriptions: () -> Unit,
+    onOpenFile: (String) -> Unit,
+) {
+    val browser = viewModel { VaultBrowserViewModel(container.database.dao()) }
+    val browserState by browser.state.collectAsStateWithLifecycle()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                VaultDrawerContent(
+                    state = browserState,
+                    onQuery = browser::onQuery,
+                    onTab = browser::onTab,
+                    onToggleFolder = browser::toggleFolder,
+                    onOpenFile = { path ->
+                        scope.launch { drawerState.close() }
+                        onOpenFile(path)
+                    },
+                )
+            }
+        },
+    ) {
+        HomeBody(
+            container,
+            onOpenSettings,
+            onOpenSubscriptions,
+            onOpenDrawer = { scope.launch { drawerState.open() } },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeBody(
+    container: AppContainer,
+    onOpenSettings: () -> Unit,
+    onOpenSubscriptions: () -> Unit,
+    onOpenDrawer: () -> Unit,
+) {
     val settings by container.settingsStore.settings.collectAsStateWithLifecycle(initialValue = null)
     val status by container.syncController.status.collectAsStateWithLifecycle()
     val fileCount by container.database.dao().observeFileCount().collectAsStateWithLifecycle(initialValue = 0)
@@ -44,6 +98,9 @@ fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit, onOpenSubscr
         topBar = {
             TopAppBar(
                 title = { Text("NoteVault") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) { Icon(Icons.Filled.Menu, contentDescription = "메뉴") }
+                },
                 actions = {
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, contentDescription = "설정") }
                 },
@@ -72,6 +129,9 @@ fun HomeScreen(container: AppContainer, onOpenSettings: () -> Unit, onOpenSubscr
                 OutlinedButton(onClick = onOpenSubscriptions, enabled = !running) { Text("구독 관리") }
             }
             SyncStatusView(status, onCancel = container.syncController::cancel)
+            if (fileCount > 0) {
+                TextButton(onClick = onOpenDrawer) { Text("☰ 파일 목록 열기") }
+            }
         }
     }
 }
