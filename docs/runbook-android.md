@@ -140,3 +140,53 @@ GitHub → Settings → Developer settings → Personal access tokens → **Fine
 | 노트가 빈 화면 | 렌더러 빌드 여부(1장). `adb logcat | grep chromium` 으로 JS 오류 확인 |
 | 이미지 "이미지 없음" | 그 이미지가 있는 폴더를 구독했는지. 앱은 **받은 파일 안에서만** 찾는다 |
 | 단위 테스트가 Windows 에서만 실패 | Robolectric 은 SDK 35 로 고정(`src/test/resources/robolectric.properties`), DataStore 테스트는 메모리 구현 사용 — 이미 반영됨 |
+
+## 8. 릴리스 내기 (GitHub Releases)
+
+폰에는 GitHub Releases 의 APK 를 받아 설치·업데이트한다. 릴리스 APK 는 **릴리스 서명 키**로 서명해야 덮어쓰기 업데이트가 된다.
+
+### 8-1. 서명 키 (처음 한 번, PC 마다)
+- 키 파일: `C:/Users/SSAFY/.android-keys/notevault-release.jks` (저장소 밖. **백업 필수** — 잃어버리면 같은 앱으로 업데이트할 수 없다)
+- `~/.gradle/gradle.properties` (저장소 밖) 에 네 줄:
+  ```properties
+  notevault.keystore=C:/Users/SSAFY/.android-keys/notevault-release.jks
+  notevault.keystorePassword=...
+  notevault.keyAlias=notevault
+  notevault.keyPassword=...
+  ```
+  환경변수 `NOTEVAULT_KEYSTORE`, `NOTEVAULT_KEYSTORE_PASSWORD`, `NOTEVAULT_KEY_ALIAS`, `NOTEVAULT_KEY_PASSWORD` 로 줘도 된다.
+- Mac 에서도 빌드하려면 같은 `.jks` 를 옮기고 Mac 의 `~/.gradle/gradle.properties` 에 같은 네 줄 (경로만 Mac 경로).
+- 키가 없으면 `assembleRelease` 는 서명 안 된 `app-release-unsigned.apk` 를 만든다 (폰에 설치 불가).
+- 서명 인증서 SHA-256: `dce2d799f3d18f8cb0a69286d0ed100926f5fbf76b6d3267cb4cf9d961db400d` — **모든 릴리스에서 같아야 한다.**
+
+### 8-2. 릴리스 순서
+```bash
+# 0) 버전 정하기: 기능 추가 → 0.(+1).0, 버그 수정 → 0.x.(+1). versionCode 는 자동 계산 (0.2.0 → 200)
+V=0.2.0
+
+# 1) 테스트 + 서명된 APK (apps/android 에서)
+cd apps/android
+./gradlew testDebugUnitTest e2e                 # e2e 는 에뮬레이터를 켠 상태에서
+./gradlew assembleRelease -PappVersion=$V
+
+# 2) 서명·버전 확인 (build-tools 는 설치된 버전으로)
+BT="$LOCALAPPDATA/Android/Sdk/build-tools/36.0.0"
+"$BT/apksigner.bat" verify --print-certs app/build/outputs/apk/release/app-release.apk   # 인증서 SHA-256 이 위와 같은지
+"$BT/aapt2.exe" dump badging app/build/outputs/apk/release/app-release.apk | head -1     # versionName 확인
+sha256sum app/build/outputs/apk/release/app-release.apk                                   # 릴리스 노트에 적을 값
+
+# 3) 릴리스 노트: docs/releases/v$V.md (이전 버전 파일을 본떠 작성) → 커밋·push
+
+# 4) 태그 + 릴리스 (저장소 루트에서)
+cd ../..
+cp apps/android/app/build/outputs/apk/release/app-release.apk "notevault-v$V.apk"
+gh release create "v$V" "notevault-v$V.apk" --title "NoteVault v$V" --notes-file "docs/releases/v$V.md"
+rm "notevault-v$V.apk"
+```
+`gh release create` 는 태그가 없으면 원격의 현재 `main` 에 태그를 만든다. 릴리스 노트 커밋을 먼저 push 할 것.
+
+### 8-3. 폰에서 업데이트
+- **수동**: 폰 브라우저로 `https://github.com/kanggihoo/notevault/releases/latest` → APK 받아 설치 (덮어쓰기, 데이터 유지)
+- **자동 알림**: **Obtainium** 앱에 `https://github.com/kanggihoo/notevault` 를 등록하면 새 릴리스를 알려 주고 설치해 준다
+- "앱이 설치되지 않았습니다" 로 실패하면: 서명이 다른 APK(디버그 빌드 등)가 깔려 있는 것. 지우고 설치 (토큰·받은 파일은 다시 넣어야 한다)
+- 디버그 빌드(Android Studio ▶ Run)와 릴리스 APK 는 서명이 달라 **서로 덮어쓸 수 없다.** 실사용 폰에는 릴리스 APK 만 설치하는 것을 원칙으로 한다.

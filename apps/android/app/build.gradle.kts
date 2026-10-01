@@ -6,6 +6,23 @@ plugins {
     alias(libs.plugins.room)
 }
 
+/**
+ * 릴리스 버전. `./gradlew assembleRelease -PappVersion=0.2.0` 처럼 넘긴다 (없으면 0.1.0).
+ * versionCode 는 버전에서 계산한다 — 0.2.0 → 200, 1.4.3 → 10403. 업데이트 설치는 이 값이 커져야만 된다.
+ */
+val appVersion = (findProperty("appVersion") as String?) ?: "0.1.0"
+val appVersionCode = appVersion.split('.').map { it.toInt() }.let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
+
+/**
+ * 릴리스 서명 키. 저장소에 넣지 않고 사용자 홈의 ~/.gradle/gradle.properties (또는 같은 이름의 환경변수)에서 읽는다.
+ *   notevault.keystore=C:/Users/me/.android-keys/notevault-release.jks
+ *   notevault.keystorePassword=...
+ *   notevault.keyAlias=notevault
+ *   notevault.keyPassword=...
+ */
+fun secret(name: String): String? =
+    (findProperty("notevault.$name") as String?) ?: System.getenv("NOTEVAULT_" + name.replace(Regex("([A-Z])"), "_$1").uppercase())
+
 android {
     // 코드 패키지. applicationId 와 별개다.
     namespace = "com.ssafy.notevault"
@@ -16,9 +33,30 @@ android {
         applicationId = "com.ssafy.notevault.kotlin"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        val keystore = secret("keystore")
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = secret("keystorePassword")
+                keyAlias = secret("keyAlias")
+                keyPassword = secret("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // 키가 없으면 서명 안 된 APK 가 나온다 (폰에 설치 불가). 키 설정은 docs/runbook-android.md 8장.
+            signingConfig = signingConfigs.findByName("release")
+            // 첫 릴리스는 코드 축소(R8)를 끈다. 켜려면 Room·직렬화·@JavascriptInterface 보호 규칙이 필요하다.
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
