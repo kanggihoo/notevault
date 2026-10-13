@@ -13,3 +13,5 @@ declare module 'katex/contrib/auto-render' {
     options?: { delimiters?: Delimiter[]; throwOnError?: boolean },
   ): void
 }
+
+declare module '*.css'

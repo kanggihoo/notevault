@@ -17,7 +17,7 @@
 | Node.js | 렌더러(JS)를 고칠 때만. `npm install` 한 번 |
 | adb | `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` (PATH 에 없으면 전체 경로로) |
 
-Android Studio 로 열 때는 **`apps/android` 폴더**를 연다. 저장소 루트나 `android/`(RN 이 만든 폴더)가 아니다.
+Android Studio 로 열 때는 **`apps/android` 폴더**를 연다. 저장소 루트가 아니다.
 
 ## 1. 무엇을 고쳤나에 따라
 
@@ -32,7 +32,7 @@ Android Studio 로 열 때는 **`apps/android` 폴더**를 연다. 저장소 루
 ```bash
 # 저장소 루트
 npm run renderer:build             # assets/renderer/dist/index.html 갱신
-npx jest assets/renderer           # 렌더러 JS 테스트 (현재 28개)
+npm test                           # 렌더러 JS 테스트 (vitest) (현재 28개)
 ```
 
 ## 2. 빌드
@@ -50,7 +50,7 @@ Android Studio 에서는 **Build → Assemble Project** 또는 그냥 ▶ Run (�
 |---|---|---|---|
 | `./gradlew testDebugUnitTest` | 단위·슬라이스·통합 (현재 118개): 동기화·DB·오류 분류·링크 해석·ViewModel | 없음 (PC 의 JVM + Robolectric) | 수십 초 |
 | `./gradlew e2e` | 앱 전체 + 기기 안 가짜 GitHub(MockWebServer) (현재 4개): 설정 → 구독 → 동기화 → 서랍 → 노트 렌더링 → 위키링크 | 켜진 에뮬레이터 또는 USB 연결된 폰 | 1분 안팎 |
-| `npx jest assets/renderer` | 렌더러 JS (현재 28개) | Node | 수 초 |
+| `npm test` | 렌더러 JS (현재 28개) | Node | 수 초 |
 
 결과 보고서
 - 단위: `app/build/reports/tests/testDebugUnitTest/index.html`

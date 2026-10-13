@@ -74,10 +74,9 @@ Syncthing·VPS 방식은 검토 후 기각했다 — PC 두 대가 git 으로 �
 | WebView 호스팅·통로 | **Kotlin** | `.../vault/VaultWeb.kt`, `RendererViews.kt` | |
 | **마크다운 → HTML 렌더링** | **JS** | `assets/renderer/src/` | markdown-it·callout·mermaid·KaTeX·highlight.js |
 | 렌더러 빌드 | **JS(Node)** | `assets/renderer/build.mjs` (`npm run renderer:build`) | 결과물 `assets/renderer/dist/index.html` 하나 |
-| 렌더러 테스트 | **JS(RN 도구)** | `assets/renderer/src/*.test.ts` | `jest-expo` 프리셋으로 돈다 |
-| 렌더러 색 토큰 | **RN 파일** | `global.css` | `build.mjs` 가 `--nv-` 변수를 읽는다 |
+| 렌더러 테스트 | **JS(Node)** | `assets/renderer/src/*.test.ts` | `npm test` (vitest) |
+| 렌더러 색 토큰 | **CSS** | `assets/renderer/src/tokens.css` | `build.mjs` 가 `--nv-` 변수를 읽는다 |
 | 렌더러를 앱에 넣기 | **Gradle** | `apps/android/app/build.gradle.kts` 의 `syncRenderer` | 빌드마다 `dist/index.html` → 앱 assets 자동 복사 |
-| 옛 RN 앱 | (사용 중단) | `src/` 등, 4장 | 비교용으로만 남김 |
 
 렌더러는 RN 앱과 Kotlin 앱이 **같은 번들을 공유**한다. 통로만 다르다.
 
@@ -87,27 +86,13 @@ Syncthing·VPS 방식은 검토 후 기각했다 — PC 두 대가 git 으로 �
 | 렌더러 → 앱 | `window.ReactNativeWebView.postMessage` | `window.NoteVault.postMessage` (`@JavascriptInterface`) |
 | 이미지 경로 | 노트 폴더 기준 | 앱이 넘긴 `images` 맵(볼트 전체 해석) 우선 |
 
-## 4. 이제 쓰이지 않는 코드·디렉토리
+## 4. 이제 쓰이지 않는 코드·디렉토리 → 삭제됨 (2026-10-14)
 
-Kotlin 앱은 아래를 **전혀 사용하지 않는다.** 옛 RN 앱을 비교용으로 남겨 둔 것뿐이다.
-
-| 경로 | 무엇 | 지울 때 주의 |
-|---|---|---|
-| `src/` 전체 | RN 앱 (화면·Device Flow·동기화·DB·스토어·NativeWind 컴포넌트) | 없음 |
-| `app.config.js`, `eas.json` | Expo 앱 설정·EAS 빌드 프로필 | 없음 |
-| `babel.config.js`, `metro.config.js`, `postcss.config.mjs`, `nativewind-env.d.ts` | RN 번들러·스타일 설정 | 없음 |
-| `.env`, `.env.example` | Device Flow 용 `GITHUB_CLIENT_ID` | GitHub 의 OAuth App(`notevault-oauth`)도 필요 없으면 폐기 |
-| `android/` (git 무시됨) | RN prebuild 결과, `app-release.apk`(약 110MB) | 디스크만 차지 |
-| `.expo/` (git 무시됨) | Expo 캐시 | 없음 |
-| `design.md`, `docs/superpowers/specs/2026-08-14-notevault-design.md` | RN 판 설계 문서 | 참고 자료로 보관해도 됨 |
-| `assets/renderer/dist/renderer.js`, `renderer.css` | 렌더러 빌드 중간 산출물 (앱은 `index.html` 만 씀) | `build.mjs` 가 다시 만든다 |
-| `package.json` 의존성 중 `expo*`, `react*`, `nativewind`, `zustand` 등 | RN 앱용 | 아래 "지우면 안 되는 것" 먼저 옮길 것 |
-
-**RN 을 지울 때 먼저 옮겨야 하는 것** (지금은 RN 파일에 기대고 있다)
-- `global.css` 의 `--nv-` 색 토큰 → 렌더러 전용 파일로
-- `jest-expo` 프리셋 → 렌더러 테스트를 순수 jest(또는 vitest) 설정으로
-- `package.json` 에서 렌더러가 쓰는 것만 남기기: `esbuild`, `markdown-it`, `markdown-it-obsidian-callouts`, `highlight.js`, `katex`, `mermaid`, `@types/markdown-it`, 테스트 러너
-- 그 뒤 `assets/renderer/` → `renderer/` 로 옮기고 `syncRenderer` 의 경로 한 줄을 고친다
+옛 RN 앱(`src/`)과 Expo·Metro·NativeWind·EAS 설정, `global.css`, `.env.example`, 루트 `assets/*.png`, RN 판 설계 문서를 삭제했다.
+- 색 토큰은 `assets/renderer/src/tokens.css` 로 옮겼다 (`build.mjs` 가 읽는다).
+- 렌더러 테스트는 `jest-expo` 대신 `vitest` 로 돈다 (`npm test`).
+- `package.json` 에는 렌더러 빌드·테스트용 의존성만 남았다.
+- 로컬 `.env` 는 git 밖 파일이라 남겨 두었다. GitHub OAuth App `notevault-oauth` 폐기는 별도.
 
 ## 5. 저장소 밖의 정리 상태
 

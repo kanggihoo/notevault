@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "NoteVault Android (Kotlin) 아키텍처",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Compose 화면",
+      "sublabel": "ui/ · settings/ · sync/ · vault/",
+      "pos": [
+        40,
+        120
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "vm",
+      "type": "backend",
+      "label": "ViewModel",
+      "sublabel": "StateFlow<UiState>",
+      "pos": [
+        290,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "sync",
+      "type": "backend",
+      "label": "SyncController",
+      "sublabel": "runSync · planSync · Pool",
+      "pos": [
+        530,
+        120
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "tag": "앱 수명 scope"
+    },
+    {
+      "id": "client",
+      "type": "backend",
+      "label": "GithubClient",
+      "sublabel": "OkHttp",
+      "pos": [
+        790,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "github",
+      "type": "external",
+      "label": "GitHub 저장소",
+      "sublabel": "Obsidian 볼트",
+      "pos": [
+        1030,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "brand": "github"
+    },
+    {
+      "id": "settings",
+      "type": "security",
+      "label": "SettingsStore",
+      "sublabel": "DataStore + Keystore",
+      "pos": [
+        290,
+        300
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "PAT 암호화"
+    },
+    {
+      "id": "room",
+      "type": "database",
+      "label": "Room DB",
+      "sublabel": "files · subscriptions · bookmarks",
+      "pos": [
+        530,
+        300
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "filesDir/vault/",
+      "sublabel": "VaultFiles (원자적 쓰기)",
+      "pos": [
+        790,
+        300
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "webview",
+      "type": "frontend",
+      "label": "WebView",
+      "sublabel": "NoteScreen · RendererViews",
+      "pos": [
+        40,
+        470
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "loader",
+      "type": "backend",
+      "label": "VaultWeb",
+      "sublabel": "WebViewAssetLoader",
+      "pos": [
+        290,
+        470
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "bundle",
+      "type": "cloud",
+      "label": "renderer/index.html",
+      "sublabel": "앱 assets (JS 번들)",
+      "pos": [
+        530,
+        470
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "jsbuild",
+      "type": "external",
+      "label": "assets/renderer",
+      "sublabel": "TS + esbuild (Node)",
+      "pos": [
+        790,
+        470
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "global.css 색 토큰"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Android 앱 (apps/android, Kotlin)",
+      "wraps": [
+        "ui",
+        "vm",
+        "sync",
+        "client",
+        "settings",
+        "room",
+        "files",
+        "webview",
+        "loader",
+        "bundle"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ui-vm",
+      "from": "ui",
+      "to": "vm",
+      "label": "collect",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vm-sync",
+      "from": "vm",
+      "to": "sync",
+      "label": "sync()",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sync-client",
+      "from": "sync",
+      "to": "client",
+      "variant": "emphasis"
+    },
+    {
+      "id": "client-github",
+      "from": "client",
+      "to": "github",
+      "label": "REST + PAT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vm-settings",
+      "from": "vm",
+      "to": "settings",
+      "label": "토큰 저장",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        370,
+        242
+      ]
+    },
+    {
+      "id": "sync-room",
+      "from": "sync",
+      "to": "room",
+      "label": "upsert",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        620,
+        242
+      ]
+    },
+    {
+      "id": "client-files",
+      "from": "client",
+      "to": "files",
+      "label": "바뀐 파일만",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        870,
+        242
+      ]
+    },
+    {
+      "id": "ui-webview",
+      "from": "ui",
+      "to": "webview",
+      "label": "노트 열기",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        125,
+        327
+      ]
+    },
+    {
+      "id": "webview-loader",
+      "from": "webview",
+      "to": "loader",
+      "label": "https"
+    },
+    {
+      "id": "loader-bundle",
+      "from": "loader",
+      "to": "bundle"
+    },
+    {
+      "id": "jsbuild-bundle",
+      "from": "jsbuild",
+      "to": "bundle",
+      "label": "syncRenderer",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "동기화 경로",
+      "items": [
+        "Compose → ViewModel → SyncController",
+        "HEAD SHA → 트리 1회 → blob SHA 다른 파일만",
+        "Room 이 인덱스, filesDir 가 실제 파일"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "렌더링 경로",
+      "items": [
+        "WebView 가 appassets 주소로 번들과 /vault/ 파일을 읽음",
+        "md → HTML 은 JS(markdown-it·mermaid·KaTeX)",
+        "Gradle syncRenderer 가 dist/index.html 복사"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "저장소 루트 (Node)",
+      "items": [
+        "package.json: 렌더러 빌드·테스트 의존성만",
+        "npm run renderer:build · npm test (vitest)",
+        "옛 RN 앱(src/)·Expo 설정은 2026-10-14 삭제"
+      ]
+    }
+  ]
+}

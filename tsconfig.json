@@ -1,17 +1,14 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest"],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "types": ["vitest/globals"],
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "nativewind-env.d.ts"
-  ]
+  "include": ["assets/renderer/src"]
 }

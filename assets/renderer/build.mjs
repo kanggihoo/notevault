@@ -3,7 +3,7 @@
  *
  *   node assets/renderer/build.mjs        (npm run renderer:build)
  *
- * 1. global.css 에서 --nv- 변수 블록을 추출한다 — 색의 단일 출처.
+ * 1. src/tokens.css 에서 --nv- 변수 블록을 추출한다 — 색의 단일 출처.
  *    :root       → html[data-nv-theme='light']
  *    .dark:root  → html[data-nv-theme='dark']
  * 2. esbuild 로 src/index.ts 를 단일 JS + CSS 로 번들한다.
@@ -22,10 +22,10 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..', '..')
 const dist = join(here, 'dist')
 
-// ── 1. global.css 에서 테마 변수 추출 ─────────────────────────────
+// ── 1. src/tokens.css 에서 테마 변수 추출 ─────────────────────────────
 // 토큰은 `--nv-x: light-dark(라이트값, 다크값)` 형식이다 (단일 출처).
 // 렌더러는 data-nv-theme 속성으로 테마를 전환하므로 두 블록으로 펼친다.
-const globalCss = await readFile(join(root, 'global.css'), 'utf8')
+const tokensCss = await readFile(join(here, 'src', 'tokens.css'), 'utf8')
 
 /** light-dark(A, B) 의 최상위 콤마에서 분리한다. rgba(...) 중첩을 견딘다. */
 function splitTopLevel(inner) {
@@ -44,7 +44,7 @@ function splitTopLevel(inner) {
 const light = []
 const dark = []
 const varPattern = /--nv-([\w-]+):\s*([^;]+);/g
-for (const match of globalCss.matchAll(varPattern)) {
+for (const match of tokensCss.matchAll(varPattern)) {
   const [, name, rawValue] = match
   const value = rawValue.trim()
   const ld = /^light-dark\((.*)\)$/s.exec(value)
@@ -58,7 +58,7 @@ for (const match of globalCss.matchAll(varPattern)) {
     dark.push(`--nv-${name}: ${value};`)
   }
 }
-if (light.length === 0) throw new Error('global.css 에서 --nv- 토큰을 찾지 못했다')
+if (light.length === 0) throw new Error('tokens.css 에서 --nv- 토큰을 찾지 못했다')
 
 const themeVars = [
   `html[data-nv-theme='light'] {\n  ${light.join('\n  ')}\n}`,
